@@ -1,0 +1,17 @@
+# 编译产物
+tests/proj_test/output
+tests/sdk/demo/*/output
+
+#linux
+tests/linux/sbi/fw_stub.elf
+tests/linux/DevTree/rv_sim.dtb
+!tests/linux/fw_stub.bin
+# 测试二进制
+*.bin
+*.o
+*.exe
+# 调试文件
+*.dSYM/
+!rv_sim.exe
+!tests/sdk/util/f_hextobin.exe
+1

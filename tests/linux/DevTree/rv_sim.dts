@@ -1,0 +1,68 @@
+/dts-v1/;
+
+/* RV_sim 设备树（人类可读镜像）
+ *
+ * 注意：生效的 rv_sim.dtb 由本目录 mkdtb.py 直接生成（不走 dtc），
+ * 本文件是它的等价 DTS 表达，仅供阅读与修改参考——改动请同步 mkdtb.py
+ * 并重新生成 DTB。mkdtb.py 中 phandle 固定为：cpu-intc=1、plic=2。
+ *
+ * chosen 的 initrd-start/end 在 mkdtb.py 里按 rootfs.cpio 实际大小动态
+ * 计算（Bug 11：end 必须等于 start + 文件大小），此处不展开。 */
+
+/ {
+    #address-cells = <1>;
+    #size-cells = <1>;
+    compatible = "rv_sim";
+
+    chosen {
+        bootargs = "earlycon=sbi console=hvc0";
+        /* stdout-path 已移除：避免内核把 uart@8200 注册成 console（与 getty
+         * 的 tty open 路径冲突）；printk 走 hvc0，串口交互走 ttyS0 */
+    };
+
+    cpus {
+        #address-cells = <1>;
+        #size-cells = <0>;
+        timebase-frequency = <1000000>;
+
+        cpu@0 {
+            device_type = "cpu";
+            reg = <0>;
+            compatible = "riscv";
+            riscv,isa = "rv32imafc";
+            mmu-type = "riscv,sv32";
+            clock-frequency = <1000000>;
+
+            cpu_intc: interrupt-controller {
+                compatible = "riscv,cpu-intc";
+                interrupt-controller;
+                #interrupt-cells = <1>;
+                /* S-mode 软件(1)/定时器(5)/外部(9)中断；软件与定时器经
+                 * mideleg 委托到 S-mode，外部中断由 PLIC 汇聚到 SEIP */
+            };
+        };
+    };
+
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x80000000 0x08000000>;    /* 128MB LMEM */
+    };
+
+    uart@8200 {
+        compatible = "ns16550a";
+        reg = <0x00008200 0x100>;
+        reg-shift = <2>;
+        clock-frequency = <1000000>;
+        interrupt-parent = <&plic>;
+        interrupts = <10>;                /* PLIC source 10（QEMU virt 同号） */
+    };
+
+    plic: plic@0c000000 {
+        compatible = "sifive,plic-1.0.0";
+        reg = <0x0c000000 0x04000000>;
+        interrupt-controller;
+        #interrupt-cells = <1>;
+        interrupts-extended = <&cpu_intc 9>;   /* S-mode external */
+        riscv,ndev = <53>;
+    };
+};
